@@ -1,4 +1,4 @@
-import a as proxy_check
+import proxy_switchero as proxy_check
 
 print proxy_check.proxies
 
