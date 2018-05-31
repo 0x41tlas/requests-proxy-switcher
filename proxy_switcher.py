@@ -10,6 +10,9 @@ proxies = {
     'http': None
 }
 
+# format: <ip>:<port>
+current_proxy = None
+
 # Quick and easy bs4 parsing function
 def bsoup(data):
     return bs4.BeautifulSoup(data.text, 'lxml')
@@ -23,13 +26,21 @@ def check_host_up(host):
     else:
         return False
 
+def add_proxy(ip, port):
+    proxies['https'] = "https://{}:{}".format(ip, port)
+    proxies['http'] = "http://{}:{}".format(ip, port)
+
+    current_proxy = (ip, port)
+
 def set_proxy():
     proxy_tuple = current_proxy()
     if proxy_tuple is False:
         print("[!] You've either broken it, or run out of proxies.")
+        print("[*] Exiting with status code 1")
+        exit(1)
     else:
-        proxies['https'] = "https://{}:{}".format(proxy_tuple[0], proxy_tuple[1])
-        proxies['http'] = "http://{}:{}".format(proxy_tuple[0], proxy_tuple[1])
+        set_proxy(proxy_tuple[0], proxy_tuple[1])
+
 
 def current_proxy():
     try:
@@ -48,15 +59,21 @@ def find_proxy():
 
     # returns list of proxies with https
     out_list = filter(lambda x: (x.find_all('td')[6].text == "yes") is True, out.find_all('tr'))
-    global PROXY_ITER
+
     # I know, I know... This is a terrible one-liner. I'm working on a solution using regex that'll be alot cleaner
     proxy_dict = {ip: port for (ip, port) in zip((map(lambda x: x.find_all('td')[0].text, out_list)), (map(lambda x: x.find_all('td')[1].text, out_list)))}
+    global PROXY_ITER
     PROXY_ITER = proxy_dict.iteritems()
 
 # makes all the function calls of a first connection for you
 def first_connection():
     find_proxy()
     set_proxy()
+    if check_host_up(current_proxy[0]) is True:
+        print("[*] Connected to {}:{}".format(current_proxy[0], current_proxy[1]))
+    else:
+        print("[!] Connection to {}:{} failed. Exiting".format(current_proxy[0], current_proxy[1]))
+        exit(0)
 
 if __name__ == '__main__':
     first_connection()
