@@ -48,6 +48,7 @@ def find_proxy():
     # returns list of proxies with https
     out_list = filter(lambda x: (x.find_all('td')[6].text == "yes") is True, out.find_all('tr'))
     global PROXY_ITER
+    # I know, I know... This is a terrible one-liner. I'm working on a solution using regex that'll be alot cleaner
     proxy_dict = {ip: port for (ip, port) in zip((map(lambda x: x.find_all('td')[0].text, out_list)), (map(lambda x: x.find_all('td')[1].text, out_list)))}
     PROXY_ITER = proxy_dict.iteritems()
 
