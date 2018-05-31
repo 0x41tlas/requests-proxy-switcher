@@ -5,44 +5,84 @@ import os
 
 # global proxy list
 # proxy format: 'http(s)://<proxy_ip>:<proxy_port>'
-proxies = {
+PROXIES = {
     'https': None,
     'http': None
 }
 
 # format: <ip>:<port>
-current_proxy = None
+CURRENT_PROXY = None
+# change to False if you don't want to exit on an error
+exit_status = True
+
+PROXY_ITER = None
 
 # Quick and easy bs4 parsing function
 def bsoup(data):
     return bs4.BeautifulSoup(data.text, 'lxml')
 
+# Quick and easy request function
+def req_with_proxy(url):
+    r = requests.get(url, proxies=PROXIES)
+    r.raise_for_status
+    return r
+
+def req_without_proxy(url):
+    r = requests.get(url)
+    r.raise_for_status
+    return r
+
+def exit_quit():
+    if exit_status is True:
+        exit(0)
+    elif exit_status is False:
+        return
+    else:
+        print("[*] True or False man... One or the other")
+
 # pings proxy IP to ensure host is up
-"""NOTE: If the IP is one of another valid, non-proxy server, the check will still return True... I need to fix this."""
+# Note: If the IP is one of another valid, non-proxy server, the check will still return True... I need to fix this.
 def check_host_up(host):
-    response = os.system("ping -c 1 {}".format(host))
+    print("[*] Pinging proxy server...")
+    response = os.system("ping -c 1 {} > /dev/null".format(host))
     if response == 0:
+        print("[ OKAY ]")
         return True
     else:
         return False
 
-def add_proxy(ip, port):
-    proxies['https'] = "https://{}:{}".format(ip, port)
-    proxies['http'] = "http://{}:{}".format(ip, port)
+def check_proxy_ip():
+    print("[*] Checking proxy connection...")
+    if CURRENT_PROXY[0] == get_proxy_ip():
+        print("[ OKAY ]")
+        return True
+    else:
+        print("[!] Current IP does not match proxy IP! Quitting.")
+        exit_quit()
+        return False
 
-    current_proxy = (ip, port)
+def get_proxy_ip():
+    r = req_with_proxy('https://www.iplocation.net')
+    soup = bsoup(r)
+    return soup.p.span.text
+
+def add_proxy(ip, port):
+    PROXIES['https'] = "https://{}:{}".format(ip, port)
+    PROXIES['http'] = "http://{}:{}".format(ip, port)
+
+    global CURRENT_PROXY
+    CURRENT_PROXY = (ip, port)
 
 def set_proxy():
-    proxy_tuple = current_proxy()
+    proxy_tuple = set_current_proxy()
     if proxy_tuple is False:
         print("[!] You've either broken it, or run out of proxies.")
         print("[*] Exiting with status code 1")
-        exit(1)
+        exit_quit(1)
     else:
-        set_proxy(proxy_tuple[0], proxy_tuple[1])
+        add_proxy(proxy_tuple[0], proxy_tuple[1])
 
-
-def current_proxy():
+def set_current_proxy():
     try:
         return next(PROXY_ITER)
     except Exception as e:
@@ -50,10 +90,9 @@ def current_proxy():
         return False
 
 def find_proxy():
-    print "[*] requesting proxy list..."
-    r = requests.get('https://us-proxy.org/')
-    print "[*] done"
-    r.raise_for_status
+    print "[*] Requesting proxy list..."
+    r = req_without_proxy('https://us-proxy.org/')
+    print "[ OKAY ]"
     soup = bsoup(r)
     out = soup.find('tbody')
 
@@ -69,11 +108,11 @@ def find_proxy():
 def first_connection():
     find_proxy()
     set_proxy()
-    if check_host_up(current_proxy[0]) is True:
-        print("[*] Connected to {}:{}".format(current_proxy[0], current_proxy[1]))
+    if check_host_up(CURRENT_PROXY[0]) and check_proxy_ip() is True:
+        print("[*] Set proxy as {}:{}".format(CURRENT_PROXY[0], CURRENT_PROXY[1]))
     else:
-        print("[!] Connection to {}:{} failed. Exiting".format(current_proxy[0], current_proxy[1]))
-        exit(0)
+        print("[!] Connection to {}:{} failed. Exiting".format(CURRENT_PROXY[0], CURRENT_PROXY[1]))
+        exit_quit()
 
 if __name__ == '__main__':
     first_connection()
