@@ -10,6 +10,10 @@ proxies = {
     'http': None
 }
 
+# Quick and easy bs4 parsing function
+def bsoup(data):
+    return bs4.BeautifulSoup(data.text, 'lxml')
+
 # pings proxy IP to ensure host is up
 """NOTE: If the IP is one of another valid, non-proxy server, the check will still return True... I need to fix this."""
 def check_host_up(host):
@@ -19,23 +23,20 @@ def check_host_up(host):
     else:
         return False
 
-def bsoup(data):
-    return bs4.BeautifulSoup(data.text, 'lxml')
-
-def https_check(state):
-    state.find_all('td')[6].text == "yes"
-
 def set_proxy():
     proxy_tuple = current_proxy()
-    proxies['https'] = "https://{}:{}".format(proxy_tuple[0], proxy_tuple[1])
-    proxies['http'] = "http://{}:{}".format(proxy_tuple[0], proxy_tuple[1])
+    if proxy_tuple is False:
+        print("[!] You've either broken it, or run out of proxies.")
+    else:
+        proxies['https'] = "https://{}:{}".format(proxy_tuple[0], proxy_tuple[1])
+        proxies['http'] = "http://{}:{}".format(proxy_tuple[0], proxy_tuple[1])
 
 def current_proxy():
     try:
         return next(PROXY_ITER)
     except Exception as e:
-        print "[!] You've run out of proxies... or something. Here's the error:"
         print e
+        return False
 
 def find_proxy():
     print "[*] requesting proxy list..."
@@ -52,5 +53,10 @@ def find_proxy():
     proxy_dict = {ip: port for (ip, port) in zip((map(lambda x: x.find_all('td')[0].text, out_list)), (map(lambda x: x.find_all('td')[1].text, out_list)))}
     PROXY_ITER = proxy_dict.iteritems()
 
-if __name__ == '__main__':
+# makes all the function calls of a first connection for you
+def first_connection():
     find_proxy()
+    set_proxy()
+
+if __name__ == '__main__':
+    first_connection()
