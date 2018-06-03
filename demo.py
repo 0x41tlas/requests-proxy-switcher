@@ -1,8 +1,8 @@
-import a as proxy_check
+import proxy_switcher as psw
 
-print proxy_check.proxies
+print psw.proxies
 
-proxy_check.find_proxy()
-proxy_check.set_proxy()
+psw.find_proxy()
+psw.set_proxy()
 
-print proxy_check.proxies
+print psw.proxies
